@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chord Chart - Channel Connections</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+
+    .tooltip {
+      position: absolute;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 8px;
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .chord-label {
+      font-size: 12px;
+      text-anchor: middle;
+      dominant-baseline: middle;
+    }
+  </style>
+</head>
+<body>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    // JSON data for channel connections
+    const data = {
+      "channels": [
+        // {"name": "Channel 1", "connections": [11975, 5871, 8916, 2868]},
+        // {"name": "Channel 2", "connections": [1951, 0, 2060, 6171]},
+        // {"name": "Channel 3", "connections": [8010, 16145, 0, 8045]},
+        // {"name": "Channel 4", "connections": [1013, 990, 940, 0]}
+
+        {"name": "AJOVY", "connections": [0, 217, 450]},
+        {"name": "AIMOVIG", "connections": [696, 0, 148]},
+        {"name": "EMGALITY", "connections": [0, 25, 0]},
+       
+      ]
+    };
+
+    // Extract connections from JSON data
+    const connections = data.channels.map(channel => channel.connections);
+
+    // Colors for the channels
+    const colors = ["#ff8c00", "#e41a1c", "#377eb8", "#4daf4a"];
+
+    // Dimensions of the SVG
+    const width = 500;
+    const height = 500;
+    const outerRadius = Math.min(width, height) * 0.5 - 40;
+    const innerRadius = outerRadius - 30;
+
+    // Create the SVG container
+    const svg = d3.select("body")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+    // Create the chord layout
+    const chord = d3.chord()
+      .padAngle(0.05)
+      .sortSubgroups(d3.descending);
+
+    // Generate the chords
+    const chords = chord(connections);
+
+    // Create an arc generator for the ribbons
+    const ribbon = d3.ribbon()
+      .radius(innerRadius);
+
+    // Create a group for each chord
+    const groups = svg.selectAll("g")
+      .data(chords.groups)
+      .enter()
+      .append("g");
+
+    // Add the arcs for the groups
+    groups.append("path")
+      .attr("fill", (d, i) => colors[i])
+      .attr("d", d3.arc()
+        .innerRadius(innerRadius)
+        .outerRadius(outerRadius))
+      .on("mouseover", showTooltip)
+      .on("mouseout", hideTooltip);
+
+    // Add labels for the groups
+    groups.append("text")
+      .attr("class", "chord-label")
+      .attr("transform", function(d) {
+        return `rotate(${(d.startAngle + d.endAngle) / 2 * 180 / Math.PI - 90}) translate(${outerRadius + 10}) ${((d.startAngle + d.endAngle) / 2 > Math.PI) ? "rotate(180)" : ""}`;
+      })
+      .text((d, i) => data.channels[i].name);
+
+    // Create a group for each chord ribbon
+    const ribbons = svg.selectAll("path.ribbon")
+      .data(chords)
+      .enter()
+      .append("path")
+      .attr("class", "ribbon")
+      .attr("d", ribbon)
+      .attr("fill", (d) => colors[d.target.index])
+      .attr("opacity", 0.8)
+      .on("mouseover", showTooltip)
+      .on("mouseout", hideTooltip);
+
+    // Function to show tooltip
+    function showTooltip(d) {
+      const tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("left", d3.event.pageX + "px")
+        .style("top", d3.event.pageY + "px");
+
+      tooltip.html(`Source: ${data.channels[d.source.index].name}<br>Target: ${data.channels[d.target.index].name}<br>Value: ${d.source.value}`)
+    }
+
+    // Function to hide tooltip
+    function hideTooltip() {
+      d3.select(".tooltip").remove();
+    }
+  </script>
+</body>
+</html>
